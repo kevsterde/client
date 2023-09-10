@@ -1,52 +1,72 @@
 import React from 'react'
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import './Cart.scss'
+import { useSelector, useDispatch } from 'react-redux'
+import { removeItem, reset } from '../../redux/cartReducer';
+import { loadStripe } from '@stripe/stripe-js';
+import { makeRequest } from '../../makeRequest';
 
 function Cart() {
+    const products = useSelector(state => state.cart.products)
+    const totalPrice = () => {
+        let total = 0;
+        products.forEach(item =>
+            (total += item.quantity * item.price))
 
-    const data = [
-        {
-            id: 4,
-            img: "https://images.pexels.com/photos/2562992/pexels-photo-2562992.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-            img2: "https://images.pexels.com/photos/5730956/pexels-photo-5730956.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-            desc: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Accusantium consequuntur facere alias delectus, rerum recusandae? Doloribus assumenda dolorum facere non, odit blanditiis consequuntur nobis repellat dicta impedit. Minima laudantium cupiditate nihil dolores, ex, eveniet corporis iusto hic, ab fuga deserunt dignissimos nesciunt voluptatem? Nesciunt voluptatibus, consequuntur debitis possimus provident at quae, itaque, fugit cupiditate omnis nam animi! Sapiente suscipit at voluptate similique dolorem nam ducimus doloribus, odio libero quia est iure cum in officiis esse temporibus, hic quisquam saepe quas odit tempora inventore, quam dolorum repellendus! Numquam expedita ratione nostrum aperiam fugiat dolore, non quam corrupti sint consequuntur doloribus debitis sequi cupiditate exercitationem molestias esse id obcaecati. Harum qui repellat quae, id quis odio nobis corrupti nostrum, nulla, nemo rem?",
-            title: "Shoes",
-            isNew: false,
-            oldPrice: 19,
-            price: 12,
-        },
-        {
-            id: 5,
-            img: "https://images.pexels.com/photos/2562992/pexels-photo-2562992.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-            img2: "https://images.pexels.com/photos/5730956/pexels-photo-5730956.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-            title: "Shoes",
-            isNew: false,
-            oldPrice: 19,
-            price: 12,
+        return total.toFixed(2)
+    }
+
+    const dispatch = useDispatch();
+
+
+    const stripePromise = loadStripe('pk_test_51Nn2YOCn9anY7ShEmWYMgVAEZAk4ZcBD8cO1oWM2IeFobb0p80gDlKZNmRDc8XdZ8PSgZdIXPsGTZaMngDhXzMLM00CRyXuhwL'
+
+    );
+
+    const handlePayment = async () => {
+        try {
+            const stripe = await stripePromise
+            console.log(stripe);
+            console.log("kevin asd")
+            const res = await makeRequest.post("/orders", {
+                products,
+            });
+            console.log("kevin qwe")
+            stripe.redirectToCheckout({
+                sessionId: res.data.stripeSession.id,
+
+            })
+        } catch (error) {
+            console.log("kevin error")
+            console.log(error)
+
         }
-    ]
+    }
+
 
     return (
         <div className='cart'>
             <h1>Products in your cart</h1>
-            {data.map(item => (
+            {products?.map(item => (
                 <div className="item" key={item.id}>
-                    <img src={item.img} alt="" />
+                    <img src={process.env.REACT_APP_UPLOAD_URL + item.img} alt="" />
                     <div className="details">
                         <h1>{item.title}</h1>
                         <p>{item.desc?.substring(0, 100)}</p>
-                        <div className="price">1 x ${item.price}</div>
+                        <div className="price">{item.quantity} x ${item.price}</div>
                     </div>
-                    <DeleteOutlinedIcon className="delete" />
+                    <DeleteOutlinedIcon className="delete" onClick={() => dispatch(
+                        removeItem({ id: item.id })
+                    )} />
                 </div>
 
             ))}
             <div className="total">
                 <span>SUBTOTAL</span>
-                <span>$123</span>
+                <span>${totalPrice()}</span>
             </div>
-            <button>PROCEED TO CHECKOUT</button>
-            <div className="reset">Reset Cart</div>
+            <button onClick={handlePayment}>PROCEED TO CHECKOUT</button>
+            <div className="reset" onClick={() => dispatch(reset())}>Reset Cart</div>
         </div>
     )
 }
